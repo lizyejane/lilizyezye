@@ -1,0 +1,66 @@
+name: Token_Batch_New
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: "Token_Collect_Runner"
+
+    steps:
+      - name: Show GITHUB_WORKSPACE
+        run: echo "GITHUB_WORKSPACE is $GITHUB_WORKSPACE"
+
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # GITHUB_WORKSPACE 
+      - name: Copy checked out code to service path
+        run: cp -rf ${{ github.workspace }}/* /project/token_batch/
+
+      #. Install dependencies using Yarn
+      - name: Install dependencies
+        run: |
+          cd /project/token_batch/
+          yarn install
+
+      #. Restart PM2 processes
+      - name: Restart PM2 and execute scripts
+        run: |
+          echo "git pull Success!!"
+          git log --oneline | head -n 1
+          cd /project/token_batch/
+          
+          for file in schedule/*.js; do
+            process_name=$(basename "$file" .js)
+            # 이미 등록된 프로세스인지 확인
+            if pm2 list | grep -qw "$process_name"; then
+              echo "Process '$process_name' is already registered. Restarting..."
+              pm2 restart "$process_name"
+            else
+              echo "Starting new process '$process_name'"
+              pm2 start node --name "$process_name" -- "$file"
+            fi
+          done
+
+#      #. Restart PM2 processes
+#      - name: Restart PM2 and execute scripts
+#        run: |
+#          echo "git pull Success!!"
+#          git log --oneline | head -n 1
+#          cd /project/token_batch/schedule
+#          
+#          for file in *.js; do
+#            process_name=$(basename "$file" .js)
+#            # 이미 등록된 프로세스인지 확인
+#            if pm2 list | grep -qw "$process_name"; then
+#              echo "Process '$process_name' is already registered. Restarting..."
+#              pm2 restart "$process_name"
+#            else
+#              echo "Starting new process '$process_name'"
+#              pm2 start node --name "$process_name" -- "$file"
+#            fi
+#          done
+# push test
